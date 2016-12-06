@@ -1,0 +1,7 @@
+(1, ['callooh', 'eyes', 'its', 'callay', 'jubjub', 'to', 'frumious', 'wood', 'tulgey', 'snickersnack', 'day', 'uffish', 'manxome', 'galumphing', 'whiffling', 'blade', 'jaws', 'back', 'dead', 'bandersnatch', 'foe', 'bird', 'claws', 'joy', 'shun', 'come', 'by', 'boy', 'thou', 'of', 'o', 'son', 'hast', 'slain', 'bite', 'long', 'head', 'took', 'arms', 'catch', 'tree', 'flame', 'chortled', 'beamish', 'sought', 'awhile', 'sword', 'hand', 'rested', 'frabjous', 'tumtum', 'so', 'time', 'burbled', 'left'])
+(2, ['all', 'beware', 'his', 'one', 'mome', 'did', 'went', 'outgrabe', 'slithy', 'stood', 'raths', 'toves', 'twas', 'brillig', 'two', 'that', 'vorpal', 'with', 'wabe', 'were', 'gimble', 'it', 'as', 'mimsy', 'borogoves', 'gyre', 'thought', 'came'])
+(3, ['through', 'my', 'jabberwock'])
+(6, ['in'])
+(7, ['he'])
+(14, ['and'])
+(19, ['the'])

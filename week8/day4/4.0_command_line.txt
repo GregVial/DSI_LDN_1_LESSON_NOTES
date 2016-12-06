@@ -1,0 +1,84 @@
+Welcome to morning exercise 4.0 for week 8
+
+Today we will continue working with the command line and
+look at chaining functions, decorators, logging, and memory profiling.
+You can do this all in the command line, or you can also use .py files
+(remember #!/usr/bin/env python)
+
+STEP 1:
+Write a function double() that doubles the value of an input.
+Then, write a function called triple() that takes two parameters:
+the function double and x.
+So if you now pass a value 2 through triple it should return
+the number passed through double and then multiplied by 3 (so 12).
+
+background info:
+A decorator is a function (function_1) which can be added to the
+definition of another function (function_2) using a syntax we saw before:
+
+def function_1(calling_function):
+    def clean(string):
+        # We clean the string here
+        cleaned_string = string.replace("dirty", "clean")
+        # we call the original function (in this example we call)
+        calling_function(cleaned_string)
+    return clean
+
+@function_1
+def function_2(my_string):
+    print(my_string)
+>> function_2("I'm dirty")
+output is "I'm clean"
+
+STEP 2:
+So, write a decorator tell_me_more
+
+@tell_me_more
+def double(x):
+  return 2*x
+>> double(2)
+output is "Hey! The answer you wanted was 4."
+
+STEP 3:
+Write a decorator that achieves the same as the triple function
+when chained with the double (so this time decorating it).
+
+background info:
+Logging from files is useful for any production code, as it will
+store errors or other issues that might silently run (such as memory usage)
+but cause problems elsewhere.
+
+import logging
+logging.basicConfig(filename='test.log', level=logging.INFO)
+log = logging.getLogger(__name__)
+
+Will write logs to a test.log file.
+
+STEP 4:
+Take a .py file (such as one you developed on Tuesday, or write another that
+has a simple function) and add in the code above and send some logs out:
+log.debug('text')
+and check the test.log file is there
+
+STEP 5:
+if you pip install memory_profiler and in your .py file:
+
+from memory_profiler import profile
+
+@profile
+def your_function(parameter):
+    return something
+
+and then call your .py file from the command line with python file.py
+it should output a line by line profile of the memory usage.
+If this is unimpressive, try adding in a pandas read_csv to some sizeable
+dataset so that an appreciable memory usage is taken up by your decorated function.
+
+STEP 6:
+Put it together! If you use the syntax:
+fp=open('memory_profiler.log','w+')
+@profile(stream=fp)
+def your_function():
+  return something
+
+It will write the memory profile to a log file memory_profiler.log!

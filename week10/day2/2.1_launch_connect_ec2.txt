@@ -1,0 +1,41 @@
+This tutorial will tell you how to launch an instance of ec2 and connect to it
+using bash. You can also refer to the documentation:
+http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html
+
+1. You should go to the ec2 console at https://console.aws.amazon.com/ec2/
+and choose to "Launch Instance". You should then select all the defaults (such
+as that it is an Amazon Machine Image). When prompted you should let it select
+a new key pair, and you will then be prompted to download this key file. You should
+put this in a clearly marked folder so you can refer back to it later. It will
+have a ".pem" extension. If you go to the instances page you can see the new instance
+there, along with its Public DNS which you can use to refer to it.
+
+To connect to your instance, open up a terminal window and navigate to the folder
+containing the .pem key file. Type:
+$ chmod 400 my_key_file_here.pem
+$ ssh -i my_key_file_here.pem ec2-user@instance_public_DNS_here
+you will get a prompt about security - say yes to go ahead
+you are now in the terminal of the remote instance.
+
+You only need to issue the chmod command once. To reconnect to your instance later
+you just need to be in the folder containing your .pem file and type:
+$ ssh -i my_key_file_here.pem ec2-user@instance_public_DNS_here
+i.e. this is what you do every time you want to connect.
+
+2. To move files from your local computer to an ec2 instance, or the other way around:
+First set up your ec2 instance and ssh in. In another
+terminal window go to the directory containing the ".pem" key file you use to ssh into
+your ec2. For ease of use if you wish to transfer a file to ec2 you can place it
+in this directory too (or not).
+
+From local to ec2 home directory, write this in your local shell:
+Note the :~ after the public DNS:
+
+$ scp -i your_key_file_here.pem (optional full path/)file_you_want_to_move ec2-user@public_DNS_here:~
+
+Note: paths in Linux are written with ~ for the home directory of the user eg.
+~/Downloads
+would be your downloads folder.
+
+From ec2 to local, write this in your local shell:
+$ scp -i your_key_file_here.pem ec2-user@public_DNS_here:~/path_to_file_on_ec2 ~/path_to_store_file_locally_including_filename_and_extension

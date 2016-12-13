@@ -1,0 +1,79 @@
+Python connection to s3 with boto
+
+If you want to include writing to a file in s3 within your python code
+you can do that with a library called boto. Note there is also a newer version
+of this library called boto3 but I found it to be less well supported and harder
+to use than the established boto (and boto is not especially well documented either).
+
+1. Here is some example code to write a dataframe as a csv and store it in s3:
+
+from boto.s3.connection import S3Connection, Bucket, Key
+import StringIO
+import pandas as pd
+
+# note that in production code you would obscure these
+# parameters for security but for simplicity we can leave
+# them here for our purposes
+AWS_Access_Key=
+AWS_Secret_Access_Key=
+My_Bucket_Name=
+
+# create file like object in RAM to store file
+file_like_object = StringIO.StringIO()
+# write the df to a csv as a file like object
+df.to_csv(file_like_object, encoding="utf-8",  index=False)
+# this is required to use the file like object once it has been written
+file_like_object.seek(0)
+# this makes the connection to s3, note the concept of keys as file names
+conn = S3Connection(AWS_Access_Key, AWS_Secret_Access_Key)
+b = Bucket(conn, My_Bucket_Name)
+k = Key(b)
+k.key='df.csv'
+# here is where you send the data from the file like object to s3
+k.set_contents_from_file(file_like_object)
+file_like_object.close()
+
+2. Some extra functions for viewing and deleting files in s3:
+
+# to print out a list of files in a bucket
+for key in b.list():
+    print(key.name.encode('utf-8'))
+
+# to delete all files in a bucket
+for key in b.list():
+    print(key.name.encode('utf-8'))
+    key.delete()
+    print("deleted")
+
+3. To read data from an s3 file to python:
+This is substantially more difficult as we have to deal with the concept of
+filetype and encoding. We can return data from an s3 file as a string with
+something like the following:
+
+k.key=file_of_interest
+df=k.get_contents_as_string()
+
+but this is not so useful in general. What we need to do is actually transfer
+the file first from s3 to our local with the following:
+
+k.key=file_of_interest
+k.get_contents_to_filename("name_for_file_of_interest_to_store_locally")
+
+and we can then access it such as with pandas read_csv (if that is the file
+structure):
+
+df=pd.read_csv("name_for_file_of_interest_to_store_locally", encoding="utf-8")
+
+you can also be able to get around the need to store a file locally using
+the concept of the file_like_object we used before,
+
+df_preformat=k.get_contents_as_string()
+df= pd.read_csv(StringIO.StringIO(df_preformat))
+
+Note you can also set the permissions in your s3 bucket to make it readable
+by right-clicking the file and selecting "Make Public", then you can read it
+from anywhere with:
+
+df=pd.read_csv("s3://my-bucket-name/file_to_read")
+
+and that's it! Pretty cool.

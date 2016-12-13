@@ -1,0 +1,106 @@
+Setting up AWS console and s3
+
+AWS console allows you to run AWS specific commands in the terminal, which
+is not strictly required but makes things easier particularly for dealing
+with s3. You can deal with s3 both in your python code (using the library
+boto) or with the AWS commands in the terminal.
+
+Recap:
+- ec2 is a remote computer on which you can run scripts. You can certainly store files
+there but it's not so convenient to get them in and out, and it's not strictly
+what it's designed for as it's intended as a processor. In my experience ec2 connections
+can also crash occasionally, which means you might lose your files.
+- s3 is specifically for storing files. One particular use case I've had experience
+with where s3 was very useful was in uploading data to an Amazon Redshift database,
+which is highly optimised from s3 (i.e. fast). If you first stream your data to
+a csv file stored in an s3 bucket, then copy from the bucket to the database table
+it is achieved very quickly. You can then delete the file on s3. Alternatively
+s3 can be used also for long term storage of files. For example images that you
+might load onto your website could be stored on s3 and referenced from a hyperlink
+path that refers to that file.
+
+1. Setting up AWS command line interface (AWSCLI):
+- Go to the interface https://console.aws.amazon.com/iam
+- On the left sidebar, click "Users", then "Add User"
+- Enter a user name and give it both programmatic access and AWS management access
+- On the next page click "Attach existing policies directly"
+- Search for "AdministratorAccess", it should come up (exactly this text). Don't
+click on it but rather click the tick box next to it (clicking on the text
+actually opens up documentation which you don't want). Click Next.
+- Click "Create User". On this page there is a link to download a credentials csv;
+definitely make sure you download that and put it somewhere sensible you can find
+it (I recommend putting all these files into one directory). You should rename it
+also to something like AWSCLI_credentials.csv so that later on you know what it is.
+- Go to your terminal and type
+$ sudo pip install awscli
+$ aws configure
+- You will now be asked for credentials from the csv file you stored earlier. I put
+us-west-2 as the default region as that seems to be what I was assigned, but you could
+also leave this blank as it just sets a default.
+- Now you will have aws commands in your terminal. Let's set up s3 so we can
+see how the AWSCLI can be useful.
+
+2. Set up an s3 bucket
+- Go to the interface https://console.aws.amazon.com/s3
+- Click "Create bucket"
+- Give it a name not including underscores, so something like firstname-lastname-1
+and note that the name actually has to be completely unique worldwide so you might
+be rejected if it is the same as a pre-existing one.
+- Check the region as that will be important now. I said US standard. This
+relates to the physical location of the data storage centre so has implications for
+data storage laws if you are running a website for example.
+- Click on the bucket and click "Upload"
+- Create an arbitrary text file on your local computer and upload it so you
+have some contents to your bucket.
+- Go to your terminal and type:
+$ aws s3 ls s3://my-bucket-name
+it should list the file you just added to the bucket. It's important to note
+how easy that is - this is the power of the AWS command line interface. Otherwise
+we can connect to our bucket through python with a library called boto, but
+this involves several lines of code. Note you can run the same commands from
+an ec2 instance. The awscli is already installed so you can just run
+$ aws configure
+in that case to set it up.
+
+3. Further aws commands:
+- note that you can run all aws with the awscli, so for example you can use the
+command
+$ aws ec2 describe-instances
+to return information about your ec2 instances such as their public DNS, but
+generally it tends to be simpler to do this in the browser interface as we have
+been doing. s3 is the most useful case for us right now for example the command:
+$ aws s3 cp file_to_copy s3://my-bucket-name
+will copy a file to your bucket. You can also copy a whole folder with:
+$ aws s3 cp folder_to_copy s3://my-bucket-name
+but note that folders don't really exist in the same way in s3 as they do in an
+operating system (they are more just prepending filenames), and it can actually
+get harder to track if you try to insert a foldername in your s3 copy so the
+way I have written the above it will dump all the contents of the folder_to_copy
+straight into the bucket without any attempt at a folder structure. This is what
+I recommend you do as otherwise it is a bit messy. Note also that you can use
+the sync command on a folder with
+$ aws s3 sync folder_to_copy s3://my-bucket-name --exclude *.tmp
+which means that you can then change files in that folder, and then re-run the
+sync command, without having to separately remove or add individual files (note
+the sync is not done automatically, you have to manually run the sync each time
+you want to update the contents)
+
+You can also remove files from your s3 bucket with:
+$ aws s3 rm s3://my-bucket-name/file_to_remove
+and if you did use a folder structure (which I don't really recommend) then you
+can delete a folder using the recursive keyword:
+$ aws s3 rm s3://my-bucket-name/folder_to_remove --recursive
+and you can also rename files with the mv keyword:
+$ aws s3 mv s3://my-bucket-name/old_file_name s3://my-bucket-name/new_file_name
+
+You can of course copy files the other way around by:
+$ aws s3 cp s3://my-bucket-name/file_to_copy file_to_copy
+where I rewrote the filename to copy in order to give a name for the file to copy
+to the current directory. If you wanted instead to give a full pathname that would
+look like:
+$ aws s3 cp s3://my-bucket-name/file_to_copy ~/folder/subfolder
+where the ~/ is my home directory, so this will copy to my user's home/folder/subfolder
+directory.
+
+You can also delete all contents in a bucket with:
+$ aws s3 rm s3://my-bucket-name --recursive

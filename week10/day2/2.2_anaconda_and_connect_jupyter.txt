@@ -1,0 +1,146 @@
+Here are the steps to connect jupyter notebook to an active ec2 instance. First
+you must have the ec2 instance up and running and SSH in, so see a separate
+tutorial on that if you are unsure of the steps.
+
+1. Install Anaconda
+- in the ec2 shell type:
+$ sudo yum update
+$ wget http://repo.continuum.io/archive/Anaconda2-4.2.0-Linux-x86_64.sh
+$ bash Anaconda2-4.2.0-Linux-x86_64.sh
+
+2. Set the PATH variable to point to anaconda
+- first, if you were asked about adding Anaconda to path and said yes, you should
+be able to skip this step. First type "exit" in the shell and then log back in
+using the ssh command (this is necessary as a restart step). Now type in the ec2 shell:
+$ which python
+- if you return Anaconda you can stop and go to step 4., if not type:
+$ vim .bashrc
+- now you are in the vim editor, so you must be careful what you type - follow the steps:
+type: "i"
+- now you are in insert mode, you can paste the following into the section of the file
+that says User specific aliases and function:
+paste: export PATH="/home/ec2-user/anaconda2/bin:$PATH"
+- now you can exit input by pressing the esc key
+- now you can save and quit by typing ":wq"
+- you have now left vim
+
+3. to point python to the file type in bash:
+$ source .bashrc
+
+Now test by typing
+$ which python
+and you should return Anaconda. jupyter notebook commands however will not
+work owing to there being no browser to launch. If you don't actually want to
+run jupyter notebooks you don't need to go further you could stop here since
+you have Anaconda now and you can run .py files with all your imports.
+To get jupyter notebook access then in your ec2 shell follow the next steps.
+
+4. Go into python:
+$ python
+>>> from IPython.lib import passwd
+>>> passwd()
+> Enter password:
+> Verify password:
+type an easy password. You will get back a hashed key. Save both in a text file somewhere,
+you will need them. Exit the python interpreter with ctrl-z.
+
+5. Make a new directory:
+$ mkdir certificates
+$ cd certificates
+$ sudo openssl req -x509 -nodes -days 365 -newkey rsa:1024 -keyout mycert.pem -out mycert.pem
+this will ask some slightly personal questions! You can answer them or leave them blank. I gave
+my country (UK), city (London), and my first name but not my email address for example.
+type:
+$ cd ..
+you should be back in your main directory. Now type:
+$ jupyter notebook --generate-config
+$ cd .jupyter/
+$ vim jupyter_notebook_config.py
+we are back in vim; follow the steps:
+type "i"
+paste:
+
+c = get_config()
+# Notebook config this is where you saved your pem cert
+c.NotebookApp.certfile = u'/home/ec2-user/certificates/mycert.pem'
+c.NotebookApp.password= u'that_hashed_password_you_returned_earlier'
+# Run on all IP addresses of your instance
+c.NotebookApp.ip = '*'
+# Don't open browser by default
+c.NotebookApp.open_browser = False
+# Fix port to 8888
+c.NotebookApp.port = 8888
+
+press the esc key
+type ":wq"
+
+6. Go to your AWS console and check the page that summarises your ec2 instances
+currently running (which includes your public DNS). If you look down the sidebar
+on the left you can see the first link under "Network & Security" which is
+"Security Groups". Click that. Now if you click on a group and click "Actions"
+you can select "Edit inbound rules". Now a popup appears
+and you can add the following selection to launch-wizard-1
+(do not overwrite what is already there):
+
+Custom TCP Rule | TCP | 8888 | Custom 0.0.0.0/0
+
+and save.
+Note that if you run a jupyter notebook, shut it down, and then run another one
+it may consider port 8888 to be still occupied and switch to 8889. So I added
+a second rule also for 8889, but this is not strictly necessary just a convenience.
+When you launch the notebook it will tell you which port it is running on.
+
+7. Back in the ec2 shell, make sure first you are in the overall home directory
+$ cd ..
+$ pwd
+> /home/ec2-user/
+$ jupyter notebook
+it should give output stating that the notebook is running on
+"https://[all ip addresses on your system]:8888/"
+
+8. Open Chrome (NOT Safari) and enter the path:
+https://replace_with_your_public_DNS:8888
+you should get a warning that the connection is unsafe. Tell it to proceed
+and you should be prompted for the password (the unhashed version) you entered
+before. Type that in and you should now be in your familiar notebook environment.
+If you save files (eg write a csv) it will save it to the ec2 home directory
+from which you launched the jupyter notebook. Similarly the notebook itself will
+be saved there.
+
+9. Owing to processes not fully closing, your port 8888 may be occupied. To deal
+with this you can type in your ec2 shell:
+$ ps aux | grep -i notebook
+which will return a list of some processes (if you have any). Those with the reference
+"/home/ec2-user/anaconda2/bin/jupyter-notebook" are notebook processes still running.
+You will see a format which says "ec2-user some_number some_other_text"
+Where some_number is a number (probably four or five digits) which is the second text
+to appear after "ec2-user". You can kill this process with:
+$ kill -9 some_number
+Once you do this for any notebooks running, then you can start jupyter notebook
+again and it should run on 8888 (since this port is no longer occupied).
+
+#############
+## An aside on running processes with screen:
+#############
+10. Let's say you want to leave a script running for a long time, and you
+want it to be independent of your local computer. Currently if you run processes
+in your ec2 shell and then close that terminal window, the process will stop. The
+same goes for a jupyter notebook; it will stop if the terminal window is closed.
+To get around this you can use screen. If you are in ec2 shell and type:
+$ screen
+you are now in a screened process. If you now run your script and type "ctrl-a d"
+(i.e. type "ctrl" and "a" at the same time, then immediately afterwards type "d")
+you should be back in your standard window. Now you can close the terminal window
+and your process will still run in the background (which was not true before). To
+return to a screened process you type:
+$ screen -r
+note that this will work even if you close the original terminal window and ssh
+back in to the ec2 instance. Try not to get in a tangle running screens within
+screens; only run one screen so you can keep track. To check the screens running:
+$ screen -ls
+and you can kill any screens left running with
+$ screen -X -S full_name_of_screen_returned_by_screen_ls_command quit
+Note that it seems you cannot get a jupyter notebook to run a process continuously
+if you close the browser window. The notebook seems to require the browser to be open
+to run, so if you want a long running process that is independent of anything being
+left open on your local computer you will have to run it as a .py script.

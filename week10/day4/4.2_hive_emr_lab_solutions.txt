@@ -1,0 +1,67 @@
+1. Top start stations
+
+- query:
+SELECT 
+  startterminal, startstation, COUNT(*) AS count
+FROM 
+  trip
+GROUP BY 
+  startterminal, startstation
+ORDER BY 
+  count DESC
+LIMIT 10;
+
+- output:
+||startterminal|startstation|count|
+|0|70|San Francisco Caltrain (Townsend at 4th)|12950|
+|1|50|Harry Bridges Plaza (Ferry Building)|8336|
+...
+
+
+2. Top destinations + Map
+
+- query:
+SELECT
+ s.station_id, s.name, s.lat, s.long, COUNT(*) AS count
+FROM 
+  trip t
+JOIN 
+  station_data s ON s.station_id = t.endterminal
+WHERE 
+  t.startterminal = 70
+GROUP BY 
+  s.station_id, s.name, s.lat, s.long
+ORDER BY 
+  count DESC LIMIT 10;
+
+- output
+||s.station_id|s.name|s.lat|s.long|count|
+|0|55|Temporary Transbay Terminal (Howard at Beale)|37.789756774902344|-122.39464569091797|929|
+|1|77|Market at Sansome|37.789623260498047|-122.40081024169922|915|
+...
+
+
+3. Hourly data
+
+- query
+SELECT
+  hour, COUNT(*) AS trip, ROUND(AVG(duration) / 60) AS avg_duration_mins
+FROM (
+    SELECT
+      CAST(SPLIT(SPLIT(t.startdate, ' ')[1], ':')[0] AS INT) AS hour,
+      t.duration AS duration
+    FROM 
+      trip t
+    WHERE
+      t.startterminal = 70 AND t.duration IS NOT NULL
+    ) r
+GROUP BY 
+  hour
+ORDER BY 
+  hour ASC;
+
+- output
+||hour|trip|avg_duration|
+|0|0|26|8|
+|1|1|14|49|
+...

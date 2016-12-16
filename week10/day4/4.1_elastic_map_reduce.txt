@@ -1,0 +1,191 @@
+Elastic Map Reduce notes:
+
+FIRST EMR TEST:
+- Go to EMR console https://console.aws.amazon.com (select EMR, under Analytics)
+and create a cluster. Make sure you select a key pair that you already have
+on your computer. You can also check if the region is correct in the top
+right hand corner (not critical but you want to keep track of which region
+you are in and keep all your services in the same region to be consistent
+and ensure you don't lose track of which services you have, in particular
+the key pairs do not seem to cross regions so you must keep those the same
+or you will have to create a new key pair which becomes hard to keep track of).
+- Regarding regions: if you select Ireland this is region eu-west-1; you
+will need to know the region and it will have this format eg us-east-1, us-west-2.
+- It takes around 10 minutes for the EMR cluster to boot up and I'm afraid it does
+seem to be quite common to get a failure on startup, meaning you have to try
+again and create a second cluster (but usually if it last beyond the first couple
+minutes you are hopefully ok). You should press the circular refresh button
+in the top right of the console summary ("Cluster list") to refresh your view
+and see if the cluster is ready.
+- Once it's ready click on the cluster from the "Cluster list" page and click
+"Add step". On "Step Type" select "Hive program". For Script s3 location input:
+s3://REGION.elasticmapreduce.samples/cloudfront/code/Hive_CloudFront.q
+where you must replace REGION with your region. For Input s3 location input:
+s3://REGION.elasticmapreduce.samples
+with the same replacement. For Output s3 location you should put your s3 bucket
+(you can use the navigation to find it)
+In the last box you should place:
+
+-hiveconf hive.support.sql11.reserved.keywords=false
+
+and select "Add".
+- By selecting the circular refresh button you can see if it has completed (it
+will only take 1 minute) and then go to your s3 bucket to the os_requests folder
+and there will be a file (probably has a name like 00000) which you can download
+with a right-click select and view. It will have counts of operating systems.
+
+
+DISCUSSION:
+So what happened? This example case is from Amazon's documentation
+and you can see a summary of the Hive script that was used and the sources here:
+http://docs.aws.amazon.com//ElasticMapReduce/latest/ManagementGuide/emr-gs-prepare-data-and-script.html
+
+The Hive script we imported creates a table with the following Hive-SQL:
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudfront_logs (
+	Date Date,
+	Time STRING,
+	Location STRING,
+	Bytes INT,
+	RequestIP STRING,
+	Method STRING,
+	Host STRING,
+	Uri STRING,
+	Status INT,
+	Referrer STRING,
+	OS String,
+	Browser String,
+	BrowserVersion String
+)
+
+The original data was log data from Amazon's servers. This lists the time, date,
+and various information about all users' activities (including the operating
+system they used to access the server). So we first create this table
+above, then populate it with a Hive-SQL regular expression much like you have
+seen in the example on Monday:
+
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.RegexSerDe'
+WITH SERDEPROPERTIES ( "input.regex" = "^(?!#)([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+([^ ]+)\\s+[^\(]+[\(]([^\;]+).*\%20([^\/]+)[\/](.*)$" ) LOCATION 's3://us-west-2.elasticmapreduce.samples/cloudfront/data/';
+
+Finally, we create our output file by summarising the count of different operating
+systems people used to access the system:
+
+SELECT os, COUNT(*) count FROM cloudfront_logs GROUP BY os;
+
+So that is the output file you have stored on s3.
+
+ACCESSING THE CLUSTER THROUGH THE EC2 MASTER:
+Go to your ec2 console. You will see three new ec2 instances. If you select the
+descriptions you can check which is the EMR-master and which two are the EMR-slave.
+I suggest you rename the instances with those names so you can keep track. Then
+go to "Security Groups" under "Network & Security" on the left side-bar and add
+an inbound rule for:
+
+SSH | TCP | 22 | Custom | 0.0.0.0/0
+
+ensuring you select "Save". Now you can ssh in to the master using a similar format
+as a normal single ec2 instance (ehough this is a cluster of three
+instances):
+
+$ ssh -i your_key_file.pem hadoop@your_public_DNS_for_the_master
+
+Now you are inside the instance and you can type:
+$ hive
+
+Now you can type Hive-SQL:
+> show tables;
+> select * from cloudfront_logs limit 10;
+> select count(*) from cloudfront_logs;
+
+Where the result of the count is equal to the sum of the different OS systems
+you had in your text file output of the Hive query earlier. Note that the Hive-SQL
+operates fairly slowly here given the size of the table (only 5000 rows) but that
+will scale more sensibly for larger tables. Try running queries to check if the
+counts match the output text file that was stored in s3. Note that your normal
+single ec2 instance wouldn't come with Hive etc since it doesn't require a
+distributed file system. Even though we are using ssh to access the master ec2,
+we are actually querying data stored across all three machines in the cluster.
+This is seamless because of the Hadoop system that is in place and comes installed.
+
+
+FOXYPROXY FOR HADOOP USER ENVIRONMENT:
+- In Firefox/Chrome (not Safari) you can go into the add-ons/extensions and search
+for one called FoxyProxy - add the "Standard" version of this (there will be
+two or three versions). It might ask you to sign up for a paid version but you can
+avoid this.
+
+Chrome:
+- Go to the foxyproxy extension settings and select the Import/Export and import the
+file foxyproxy-settings.xml, which is in the github repository for today.
+Tell it to "Replace" current settings. For "Proxy mode"
+select "Use proxies based on their pre-defined patterns and priorities"
+
+Firefox:
+- Go to the foxyproxy extension settings and go to "Import Settings" and add the file
+foxyproxy-settings.xml, which is in the github repository for today.
+Then you select the defaults on the prompts, and ensure the
+"Select Mode" is set to "Use proxies based on their pre-defined patterns and priorities".
+- In a new terminal you will need to open a special type of ssh connection to the
+master ec2 instance of the cluster with the following:
+
+$ ssh -i your_key_file.pem -N -D 8157 hadoop@your_public_DNS_for_the_master
+
+which will open a process that does not end - just leave it as it is and it stays connected.
+If this connection is lost by shutting the terminal window down, you will not be
+able to connect to the HUE system via your browser (which is the next step).
+Now you can type into the address line of the browser:
+
+your_public_DNS_for_the_master:8888
+
+And you should see a web interface for HUE (Hadoop User Environment). You have
+to create a new username and password for this and store it (I suggest you
+write it down in your AWS folder for example).
+
+Using the HUE:
+- Once you log in you have some quickstart settings, so you can install
+all of the examples by clicking on them (it doesn't say anything
+once they have installed but if you click on all four it will install them).
+Then go through the other settings and click next to launch the homepage.
+- You now have several examples here that you can explore
+- However let's go back to the cloudfront_logs we saw earlier - we can run
+this in the web interface now. If we click "Query Editors" then "Hive"
+- You now have 5 tables, rather than just the cloudfront_logs table we had before.
+- Separately, try a normal ssh back to your ec2 master in your terminal,
+as we have done before with:
+
+$ ssh -i your_key_file.pem hadoop@your_public_DNS_for_the_master
+
+and type
+
+$ hive
+> show tables;
+
+and you see the same five tables you saw in the HUE browser interface (asking
+HUE to install the examples added the extra tables onto your ec2 cluster's
+file system, which is a Hadoop Distributed File System).
+
+- Back in HUE, you have a Hive-SQL editor. If you type the same query we did
+before:
+
+SELECT os, COUNT(*) count FROM cloudfront_logs GROUP BY os;
+
+you will see the same results (remember this is a bit slow because it's
+optimised to run on larger datasets). You can also see graphical outputs
+such as bar charts and other nice features.
+
+- Separately, if you open a new tab in your browser and type:
+
+your_public_DNS_for_the_master:50070/dfshealth.html#tab-overview
+
+you will see a summary of the Hadoop Distributed File System we are using on
+the ec2 cluster, including how much of the available storage you are using and
+so on.
+
+- Now go back and have a look at some of the installed examples. We will have
+a lab next to try out a few more features also. Note that you can totally
+control the Hadoop system running on the ec2 cluster from the terminal, it's
+just that this HUE system gives you a nice friendly interface to use - it
+doesn't fundamentally add extra features (just things like the graphical
+summary of the Hive-SQL queries and so on which you can't do in the terminal).
+- You should leave the cluster up for the lab coming next, but in general you
+must shut these down when you are not using them as you will incur charges (around
+$1 per hour)

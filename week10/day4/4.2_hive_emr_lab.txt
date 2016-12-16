@@ -1,0 +1,108 @@
+We'll be using the Bay Area Bicycle data. http://www.bayareabikeshare.com/open-data
+We will use the 201408 dataset.
+
+Presumably you already have an ec2 cluster (EMR) running and have your HUE open
+(if not go back to the notes in 4.1). To avoid extra charges, you should
+shut the EMR instance down at the end of this lab as it is billed by the hour
+(it will amount to around $1 per hour you will use it so within the $50
+credit you have).
+
+- In the HUE interface, you can see "File System" in the bar along the top. Go
+in there, and select to import data - but check you select the special option
+for importing zipped data as that is how it is provided (or you could unzip the
+file first to have the separate csv files and upload them that way, it can
+deal with either format).
+- Now, select "Metastore Manager" and select the option to create a new table
+by uploading from a file.
+- Select one of the four files and give the table a name and proceed. Some of the
+datatypes for the columns may not be sensibly assigned so do review them.
+One case in particular that was noted was in the "status_data" file it seemed
+to assign integer type to string data so that had to be altered. At the end
+when you select "Create table" you will likely get a strange error regarding
+permissions - you can actually ignore this. The table should indeed be created.
+- If you navigate back to the Metastore Manager and see a summary of the current
+tables, you must refresh the view. Then you should see the new table is indeed there.
+Proceed for the four files station_data, status_data, trip_data, weather_data as separate
+tables.
+- If you ssh in to your master ec2 instance with
+
+$ ssh -i your_key_file.pem hadoop@your_public_DNS_for_the_master
+
+and type:
+$ hive
+
+and then:
+> show tables;
+
+you should see your new tables along with the others that were there before.
+
+EXERCISES:
+1. Top start stations
+Let's start with some exploratory analysis. For example the trips table contains
+information on the trips. Let's find the top 10 most popular start stations based on the trip data.
+Formulate a Hive-SQL query to retrieve the top 10 start stations and sort them by count in descending order.
+Try this in the HUE interface and also in the terminal through the ssh to the master ec2.
+In HUE, use the Chart tab to generate a chart of the results, sorting them with the most popular on the left.
+
+
+select trip.startstation, count(trip.startstation) as cnt
+from trip
+group by trip.startstation
+order by cnt desc
+limit 10;
+
+
+2. Top destinations + Map
+Let’s determine which end stations were the most popular for trips starting from
+the most popular station. Fetch the latitude and longitude coordinates for
+trips starting in the most common starting point (that you found in the previous part).
+In order to do this you will need to join data from both the trip and station files.
+Return a table that contains the top 10 most common destinations with the following fields:
+station_id
+name
+lat
+long
+count (# of trips between the most popular start and that station)
+
+Try this in the terminal and in HUE. In HUE, display the results using the map chart.
+Note that you can decide what label to assign to the points.
+
+
+select s.name, s.lat, count(*) as cnt
+from station s, trip t
+where t.startstation = 'San Francisco Caltrain (Townsend at 4th)' and
+    t.endstation = s.name
+group by s.name
+order by cnt desc
+limit 10;
+
+
+3. Hourly data
+Dig further into the trip data for the most popular station to find the total
+number of trips and average duration (in minutes) of those trips, grouped by hour.
+You will need to do a nested query on the trip table:
+the innerquery should parse the startdate and return just the hour as
+int for the trips originating in the most common start station,
+the outer query should count such trips and calculate the average duration
+grouped and sorted by hour.
+
+Hints:
+Since the trip data stores startdate as a STRING, you’ll need to apply
+some string-manipulation to extract the hour within an inline SQL query.
+Be careful with trips that have no duration information
+Return a table with the following fields:
+hour
+number of trips
+average duration
+
+Display the results with two charts displaying the number of trips and the
+average duration as a function of the hour
+
+
+** Shut down the EMR cluster when you are done.
+
+
+do remember to shut down the EMR by the end of the day
+in EMR console if you select and terminate the cluster, the three ec3
+instances will automatically shut down also it is $1-2 per hour it is
+used including if you leave it idle

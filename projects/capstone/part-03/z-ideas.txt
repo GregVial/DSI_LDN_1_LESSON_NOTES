@@ -1,0 +1,33 @@
+Summarise and refine exploratory data analysis, correlating and plotting data.
+
+These three datasets are actively used for research in text categorization, and they have a pre-defined train/test split to facilitate comparison of results.  This is the split that I will use throughout my project.
+
+The first step is to read all the files and check that the number of documents in each category matches what was previously published.  Looking at the `xxx_counts` dataframes and comparing them with the tables in [this webpage](http://ana.cachopo.org/datasets-for-single-label-text-categorization), we can see that they match.
+
+Use `CountVectorizer` to extract the words used in each training set.  It's interesting to see that the 20Newsgroups dataset has a much bigger vocabulary than either of the Reuters datasets.  Also, `r8` is a subset of `r52`, and it has a smaller vocabulary.
+
+
+
+## Present: Summarise approach and initial results; describe successes, setbacks, and lessons learned
+
+Summarise initial results and describe how you intend to evaluate & tune Describe successes, setbacks, & lessons learned along the way.
+
+
+In part 3 of this project I was able to load and pre-process the three datasets that I will use for my work, and it all went as expected.
+
+The results of my initial analisys agree with what was previously published regarding the number of documents per class, both for training and test sets.  I also created a "word cloud" with the 50 most common words for each dataset.  As expected, most of the words in r52 and r8 are common to both word clouds, given that r8 is a subset of r52.
+
+Then I ran some models on all datasets and collected some results.  The DummyClassifier gets exactly the same as previously published, but other models get different results.  This is because feature selection was the same for all datasets, not optimised for each one individually.
+
+Now I need to work on optimising feature selection for each dataset and also on parameter tuning for each model/dataset pair, so that I can properly compare my results with what has been previously published.
+
+From this initial running of the models I learned that they will take some time to run in my machine, so I need to be prepared for that and plan in advance.  Also, it is a good idea to persistently store intermediate results, so that I don't need to run everything from scratch every time.
+
+
+======================================================================
+visualisations: word frequencies, word cloud
+
+use feature selection
+
+use different models
+

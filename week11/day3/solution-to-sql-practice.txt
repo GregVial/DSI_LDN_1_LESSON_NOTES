@@ -1,0 +1,110 @@
+== SECTION 1: CREATE TABLE ==
+
+1. create table countries(
+country_id varchar,
+region_id varchar,
+country_name varchar);
+
+2. create table countries_dup (like countries);
+
+3. drop table countries;
+drop table countries_dup;
+create table countries(
+country_id integer not null,
+country_name varchar not null,
+region_id integer not null);
+
+4. create table jobs(
+job_id integer not null unique,
+job_title varchar not null,
+min_salary integer,
+max_salary integer check(max_salary<=250000));
+
+5. drop table countries;
+create table countries(
+country_id integer not null,
+country_name varchar not null check(country_name in ('Italy', 'China', 'India')),
+region_id integer not null);
+
+6. drop table countries;
+create table countries(
+country_id integer primary key,
+country_name varchar not null check(country_name in ('Italy', 'China', 'India')),
+region_id integer not null);
+
+7. drop table countries;
+create table countries(
+country_id serial primary key,
+country_name varchar not null check(country_name in ('Italy', 'China', 'India')),
+region_id integer not null);
+
+8. create table job_history(
+employee_id integer primary key,
+start_data date not null,
+end_date date not null,
+job_id integer not null,
+department_id integer default null,
+foreign key (job_id) references jobs(job_id));
+
+9. create table employees(
+employee_id integer primary key,
+first_name varchar default null,
+last_name varchar default null,
+job_id integer not null,
+salary decimal(8,2) default null,
+foreign key(job_id) references jobs(job_id)
+on update cascade on delete restrict);
+
+
+== SECTION 2: ALTER TABLE ==
+1. alter table countries rename to countries_new;
+alter table countries_new rename to countries;
+2. alter table locations add region_id integer;
+3. alter table locations alter region_id type varchar;
+4. alter table locations drop city;
+5. alter table locations rename state_province to state;
+6. alter table locations add primary key(location_id);
+7. alter table locations drop constraint locations_pkey;
+8. alter table job_history add foreign key(job_id) references jobs(job_id);
+
+== SECTION 3: UPDATE TABLE ==
+1. update employees set email='not_available';
+2. update employees set commission_pct=0.10 where department_id=110;
+3. update employees set commission_pct=0.05 where department_id=(
+select department_id from departments where department_name='Accounting');
+4. update employees set salary = 8000 where employee_id = 105 and salary < 8000;
+5. update employees set salary = case department_id
+    when 40 then salary*1.25 when 90 then salary*1.15 when 110 then salary*1.10
+      else salary end;
+
+== SECTION 4: INSERT INTO ==
+1. insert into countries (country_id, country_name) values(2, 'USA');
+2. insert into countries (country_id, country_name) values(3, 'UK'),(4, 'France'),(5, 'Portugal');
+3. drop table countries;
+create table countries(
+country_id serial primary key,
+country_name varchar,
+region_id integer);
+insert into countries (country_name) values('India'),('USA'),('UK'),('France'),('Portugal');
+
+== SECTION 5: STRING FUNCTIONS ==
+1. select * from employees where phone_number like '%124%';
+2. update employees set phone_number = replace(phone_number, '124', '999') where phone_number like '%124%';
+3. select * from employees where length(first_name)>8;
+4. select hire_date, date_part('year', hire_date) as hire_year, date_part('month', hire_date) as hire_month from employees limit 5;
+5. select substring(job_title, 1, position(' '  in job_title)) from jobs;
+
+== SECTION 6: SUBQUERIES ==
+1. select first_name, last_name, salary from employees where salary>
+  (select salary from employees where last_name='Abel');
+2. select first_name, last_name, salary from employees where salary =
+  (select min_salary from jobs where employees.job_id=jobs.job_id);
+3. select distinct(salary) from employees e1 where
+(select count(distinct(salary)) from employees e2 where e1.salary <= e2.salary) = 5;
+OR
+select Y.salary from (select salary, row_number() over (order by X.salary desc) as rn from (select distinct(salary) from employees order by salary desc) X) Y where Y.rn=5;
+4. select * from departments where department_id not in(select department_id from employees);
+5. select e1.employee_id, e1.salary, j1.job_title from employees e1 left join jobs j1 on j1.job_id=e1.job_id where e1.salary >
+  (select max(e2.salary) from employees e2 right join jobs j2 on
+  j2.job_id=e2.job_id where j2.job_title='Marketing Manager');
+

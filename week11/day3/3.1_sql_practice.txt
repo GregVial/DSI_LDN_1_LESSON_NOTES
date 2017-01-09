@@ -1,0 +1,216 @@
+PostgreSQL practice
+
+First, load up Postgres and Postico (i.e. connect Postico to localhost). We will
+start in the Postgres command line. Remember that in the command line, the SQL
+you type will follow on to a new line and only ends when you include a semicolon.
+Note you are likely to need to google some methods, I have presented this in such
+a way that the exercise itself is intended to make you aware of certain methods.
+
+First, create a database where we are going to store the tables used in this lesson using the command 
+> create database sql_practice;
+List all the available databases using the command 
+> \l
+Connect to the new database using the command 
+> \c sql_practice;
+
+== SECTION 1: CREATE TABLE ==
+
+1. Create a table countries, which includes columns country_id, country_name, and region_id.
+Note: check in Postico that the table is created (make sure you refresh). You might
+want to drop any pre-existing tables.
+
+2. Use the LIKE command to create a second table countries_dup with the
+same columns (note this will not copy any rows).
+
+3. Drop both tables and create a table countries with the same country_id, country_name, and region_id
+columns now with constraints NOT NULL. Use an integer type for the id columns
+and varchar for the name column.
+
+4. Create a table named jobs, including job_id, job_title, min_salary, max_salary
+and use the UNIQUE constraint so that job_id is not repeated. Furthermore use the
+CHECK command to verify the max_salary amount does not exceed the upper limit 250 000.
+
+5. Drop the table countries and create a new countries table with the same conditions as part 3,
+but with an additional condition that country_name can only be one of India, China, or Italy.
+
+6. Drop the countries table and create a new countries table the same as part 5 but
+use the PRIMARY KEY constraint to set country_id as the primary key on which to
+perform joins (this implies unique and not null).
+
+7. Drop the countries table and create a new countries table the same as part 6 but
+use the SERIAL constraint to set country_id as an integer value that auto-increments
+upon insertion of a new row (this implies unique, integer, and not null).
+
+8. Create a table job_history including employee_id, start_date, end_date, job_id and department_id
+and make employee_id the primary key and use the FOREIGN KEY and REFERENCES keywords to
+constrain job_id to only those values which exist in the jobs table job_id column. Additionally
+use the DEFAULT keyword to set department_id to a default value of NULL.
+
+9. Create a table employees including columns employee_id, first_name, last_name, job_id, salary
+and make sure that the employee_id column does not contain any duplicate value at the time of
+insertion, and the foreign key column job_id, referenced by the column job_id of jobs table,
+can contain only those values which exist in the jobs table. Include the keywords ON UPDATE CASCADE
+to allow a cross-table update and ON DELETE RESTRICT to reject cross-table deletion.
+
+
+== SECTION 2: ALTER TABLE ==
+
+First, drop the tables created in the previous section and copy-paste all
+of the following to ensure the same starting point:
+
+= COPY_PASTE:
+create table regions(
+region_id integer primary key,
+region_name varchar);
+create table countries(
+country_id integer primary key,
+country_name varchar,
+region_id integer);
+create table locations(
+location_id integer unique,
+street_address varchar,
+postal_code varchar,
+city varchar,
+state_province varchar,
+country_name varchar);
+create table departments(
+department_id integer primary key,
+department_name varchar,
+manager_id integer,
+location_id integer);
+create table jobs(
+job_id varchar primary key,
+job_title varchar,
+min_salary integer,
+max_salary integer);
+create table job_history(
+employee_id integer primary key,
+start_date date,
+end_date date,
+job_id varchar,
+department_id integer);
+create table employees(
+employee_id integer primary key,
+first_name varchar,
+last_name varchar,
+email varchar,
+phone_number varchar,
+hire_date date,
+job_id varchar,
+salary decimal(8,2),
+commission_pct decimal(4,2),
+manager_id integer,
+department_id integer);
+= END
+
+
+1. Use the ALTER TABLE and RENAME TO command to rename countries to countries_new,
+and back again.
+Note: if you type "\d" in psql command line you return all the tables. If you type
+"\d table_name" you return column and constraint details for the table. You could
+continue to use Postico to review changes to the tables but you will find
+these commands faster.
+
+2. Use the ADD command to add a column region_id to the table locations, and make
+it an integer type.
+
+3. Use the ALTER and TYPE commands to change the type of column region_id in locations
+to a varchar.
+
+4. Use the DROP command to drop to column city from the table locations.
+
+5. Use the RENAME command to change the name of the column state_province to state.
+
+6. Use the ADD command to include a primary key on the locations table for the location_id column.
+
+7. Run "\d locations" to see the reference to the primary key above. Now remove the
+primary key constraint with the DROP CONSTRAINT command taking note of the reference
+name for the primary key.
+
+8. Add a foreign key on the job_id column of the job_history table, referencing
+the primary key job_id of the jobs table.
+
+
+== SECTION 3: UPDATE TABLE ==
+
+First populate tables with:
+copy employees from 'full_path_to_todays_repo/employees.csv' delimiter '|';
+copy departments from 'full_path_to_todays_repo/departments.csv' delimiter '|';
+copy jobs from 'full_path_to_todays_repo/jobs.csv' delimiter '|';
+
+if the copy command does not work, use \copy instead.
+
+1. Return eg. the first five rows of employees and inspect. Now use the UPDATE and SET commands
+to set all email='not_available'.
+
+2. Change the commission_pct column on employees to 0.10 for all employees whose
+department_id is 110. Inspect before and after.
+
+3. Change the commission_pct to 0.05 for any employee whose department is 'Accounting'.
+You should use a subquery (try writing the subquery first).
+
+4. Change the salary of employee_id 105 to 8000, as long as their current salary is not
+already above that figure.
+
+5. Increase the salary of employees in departments 40, 90 and 110 according to the
+structure that the salary will increase by 25% for department 40, 15% for department 90,
+and 10% for department 110, with no change for other departments. You will need to
+use a CASE WHEN statement.
+
+
+== SECTION 4: INSERT INTO ==
+
+First, insert a row into the countries table (currently empty) using the syntax:
+INSERT INTO countries VALUES(1, 'India', 2);
+
+1. Insert a row into countries with country_id 2 and country_name USA but no
+region_id.
+
+2. Insert 3 rows for UK, France, Portugal with country_id 3,4,5 respectively in one
+insert statement.
+
+3. Drop the table countries and create a new version which will auto increment
+the country_id with the keyword SERIAL (and maintain also PRIMARY KEY). Then insert
+new rows giving only the country_name 'India', 'USA', 'UK'. Check to see if country_id
+has been auto filled.
+
+
+== SECTION 5: STRING AND TIME FUNCTIONS ==
+
+1. Use the LIKE command and the %% syntax to return all rows from employees where
+the phone number contains the sequence 124 (research what the placement of the % means
+in this syntax).
+
+2. Use the condition from question 1 to change the phone number part from 124 to 999
+(leaving the rest of the phone number in place). You will need the REPLACE and SET
+commands. Make sure you check you return the same rows under the new condition of 999.
+
+3. Return all rows from employees where the length of the person's first name is more
+than eight characters. You will need the LENGTH command.
+
+4. Return the hire_date, year of the hire_date, and month of the hire_date from employees as
+three separate columns. You will need the DATE_PART command, and limit to just five rows.
+
+5. Return the first word in the job_title from jobs. Note that it's actually quite
+hard to do this to ensure cases with only one word also work as expected. You can look into
+that if you are interested or just return the query with blanks for those cases.
+You will need the SUBSTRING and POSITION arguments.
+
+
+== SECTION 6: SUBQUERIES ==
+
+1. Return the first_name, last_name, and salary of the employees who have higher
+salary than the employee whose last_name is Abel.
+
+2. Return the first_name, last_name, and salary of the employees whose salary is
+equal to the min_salary for that job. You will need to use both the employees and
+jobs tables.
+
+3. First return the top five distinct salaries from employees. Now return the
+5th highest salary (there are a few tricks to do this; one way is to use
+the COUNT)
+
+4. Return all the rows from the departments table where no employees are working.
+
+5. Return the employee_id, salary, and job_title from the employees (and jobs) tables
+with all rows where the employee salary is higher than that of the lowest-paid Shipping Clerk.
